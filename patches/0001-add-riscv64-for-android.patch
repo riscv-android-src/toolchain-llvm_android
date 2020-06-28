@@ -1,0 +1,151 @@
+From 6b0ffdfaec0f95d2fc9712ed6de4cec2aac67c0c Mon Sep 17 00:00:00 2001
+From: Lifang Xia <xlf194833@alibaba-inc.com>
+Date: Mon, 6 Jul 2020 19:15:14 +0800
+Subject: [PATCH] add riscv64 for android
+
+Change-Id: Ie7c491498a2f84c96b291fd2b3ef540b32b6c927
+---
+ clang/lib/Driver/ToolChains/Arch/RISCV.cpp           |  2 +-
+ clang/lib/Driver/ToolChains/Gnu.cpp                  | 15 +++++++++++++--
+ clang/lib/Driver/ToolChains/Linux.cpp                |  6 ++++++
+ compiler-rt/lib/sanitizer_common/sanitizer_linux.cpp |  3 +++
+ compiler-rt/lib/sanitizer_common/sanitizer_linux.h   |  4 ++++
+ lld/ELF/Arch/RISCV.cpp                               |  4 ++--
+ llvm/lib/Target/RISCV/RISCVISelLowering.cpp          |  3 +++
+ 7 files changed, 32 insertions(+), 5 deletions(-)
+
+diff --git a/clang/lib/Driver/ToolChains/Arch/RISCV.cpp b/clang/lib/Driver/ToolChains/Arch/RISCV.cpp
+index 5f69fdd..0c0b4fb 100644
+--- a/clang/lib/Driver/ToolChains/Arch/RISCV.cpp
++++ b/clang/lib/Driver/ToolChains/Arch/RISCV.cpp
+@@ -427,7 +427,7 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
+     Features.push_back("+reserve-x31");
+ 
+   // -mrelax is default, unless -mno-relax is specified.
+-  if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true))
++  if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, false))
+     Features.push_back("+relax");
+   else
+     Features.push_back("-relax");
+diff --git a/clang/lib/Driver/ToolChains/Gnu.cpp b/clang/lib/Driver/ToolChains/Gnu.cpp
+index 79a7461..a4e73d3 100644
+--- a/clang/lib/Driver/ToolChains/Gnu.cpp
++++ b/clang/lib/Driver/ToolChains/Gnu.cpp
+@@ -2085,12 +2085,14 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
+   static const char *const RISCV32LibDirs[] = {"/lib32", "/lib"};
+   static const char *const RISCV32Triples[] = {"riscv32-unknown-linux-gnu",
+                                                "riscv32-linux-gnu",
+-                                               "riscv32-unknown-elf"};
++                                               "riscv32-unknown-elf",
++                                               "riscv32-linux-android"};
+   static const char *const RISCV64LibDirs[] = {"/lib64", "/lib"};
+   static const char *const RISCV64Triples[] = {"riscv64-unknown-linux-gnu",
+                                                "riscv64-linux-gnu",
+                                                "riscv64-unknown-elf",
+-                                               "riscv64-suse-linux"};
++                                               "riscv64-suse-linux",
++                                               "riscv64-linux-android"};
+ 
+   static const char *const SPARCv8LibDirs[] = {"/lib32", "/lib"};
+   static const char *const SPARCv8Triples[] = {"sparc-linux-gnu",
+@@ -2160,6 +2162,8 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
+         "mips64el-linux-android"};
+     static const char *const X86AndroidTriples[] = {"i686-linux-android"};
+     static const char *const X86_64AndroidTriples[] = {"x86_64-linux-android"};
++    static const char *const RISCV64AndroidTriples[] = {"riscv64-linux-android"};
++    static const char *const RISCV32AndroidTriples[] = {"riscv32-linux-android"};
+ 
+     switch (TargetTriple.getArch()) {
+     case llvm::Triple::aarch64:
+@@ -2202,6 +2206,13 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
+       BiarchLibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
+       BiarchTripleAliases.append(begin(X86_64AndroidTriples),
+                                  end(X86_64AndroidTriples));
++    case llvm::Triple::riscv64:
++      LibDirs.append(begin(RISCV64LibDirs), end(RISCV64LibDirs));
++      TripleAliases.append(begin(RISCV64AndroidTriples),
++                           end(RISCV64AndroidTriples));
++      BiarchLibDirs.append(begin(RISCV32LibDirs), end(RISCV32LibDirs));
++      BiarchTripleAliases.append(begin(RISCV32AndroidTriples),
++                                 end(RISCV32AndroidTriples));
+       break;
+     default:
+       break;
+diff --git a/clang/lib/Driver/ToolChains/Linux.cpp b/clang/lib/Driver/ToolChains/Linux.cpp
+index 0006f11..8c1daea 100644
+--- a/clang/lib/Driver/ToolChains/Linux.cpp
++++ b/clang/lib/Driver/ToolChains/Linux.cpp
+@@ -150,6 +150,12 @@ std::string Linux::getMultiarchTriple(const Driver &D,
+     if (D.getVFS().exists(SysRoot + "/lib/powerpc64le-linux-gnu"))
+       return "powerpc64le-linux-gnu";
+     break;
++  case llvm::Triple::riscv64: {
++    if (IsAndroid)
++      return "riscv64-linux-android";
++    return "riscv64-linux-gnu";
++    break;
++  }
+   case llvm::Triple::sparc:
+     if (D.getVFS().exists(SysRoot + "/lib/sparc-linux-gnu"))
+       return "sparc-linux-gnu";
+diff --git a/compiler-rt/lib/sanitizer_common/sanitizer_linux.cpp b/compiler-rt/lib/sanitizer_common/sanitizer_linux.cpp
+index 1525246..f2f6da3 100644
+--- a/compiler-rt/lib/sanitizer_common/sanitizer_linux.cpp
++++ b/compiler-rt/lib/sanitizer_common/sanitizer_linux.cpp
+@@ -1976,6 +1976,9 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
+   *bp = ucontext->uc_mcontext.gregs[11];
+   *sp = ucontext->uc_mcontext.gregs[15];
+ #elif defined(__riscv)
++  #define REG_PC 64
++  #define REG_SP 2
++  #define REG_S0 7
+   ucontext_t *ucontext = (ucontext_t*)context;
+   *pc = ucontext->uc_mcontext.__gregs[REG_PC];
+   *bp = ucontext->uc_mcontext.__gregs[REG_S0];
+diff --git a/compiler-rt/lib/sanitizer_common/sanitizer_linux.h b/compiler-rt/lib/sanitizer_common/sanitizer_linux.h
+index c28347a..e009ec5 100644
+--- a/compiler-rt/lib/sanitizer_common/sanitizer_linux.h
++++ b/compiler-rt/lib/sanitizer_common/sanitizer_linux.h
+@@ -139,6 +139,10 @@ INLINE void ReleaseMemoryPagesToOSAndZeroFill(uptr beg, uptr end) {
+ #elif defined(__x86_64__)
+ # define __get_tls() \
+     ({ void** __v; __asm__("mov %%fs:0, %0" : "=r"(__v)); __v; })
++#elif defined(__riscv64) || defined(__riscv)
++# define __get_tls() \
++    ({ void** __v; __asm__("mv %0, tp" : "=r"(__v)); __v; })
++
+ #else
+ #error "Unsupported architecture."
+ #endif
+diff --git a/lld/ELF/Arch/RISCV.cpp b/lld/ELF/Arch/RISCV.cpp
+index 6154d64..9da9a26 100644
+--- a/lld/ELF/Arch/RISCV.cpp
++++ b/lld/ELF/Arch/RISCV.cpp
+@@ -243,8 +243,8 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
+     // Not just a hint; always padded to the worst-case number of NOPs, so may
+     // not currently be aligned, and without linker relaxation support we can't
+     // delete NOPs to realign.
+-    errorOrWarn(getErrorLocation(loc) + "relocation R_RISCV_ALIGN requires "
+-                "unimplemented linker relaxation; recompile with -mno-relax");
++    //errorOrWarn(getErrorLocation(loc) + "relocation R_RISCV_ALIGN requires "
++    //            "unimplemented linker relaxation; recompile with -mno-relax");
+     return R_NONE;
+   default:
+     error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+diff --git a/llvm/lib/Target/RISCV/RISCVISelLowering.cpp b/llvm/lib/Target/RISCV/RISCVISelLowering.cpp
+index a6b75ba..49fef8f 100644
+--- a/llvm/lib/Target/RISCV/RISCVISelLowering.cpp
++++ b/llvm/lib/Target/RISCV/RISCVISelLowering.cpp
+@@ -596,6 +596,9 @@ SDValue RISCVTargetLowering::lowerGlobalTLSAddress(SDValue Op,
+   int64_t Offset = N->getOffset();
+   MVT XLenVT = Subtarget.getXLenVT();
+ 
++  if (DAG.getTarget().useEmulatedTLS())
++    return LowerToTLSEmulatedModel(N, DAG);
++
+   TLSModel::Model Model = getTargetMachine().getTLSModel(N->getGlobal());
+ 
+   SDValue Addr;
+-- 
+2.9.5
+

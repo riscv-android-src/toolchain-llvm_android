@@ -387,6 +387,13 @@ class AndroidI386Config(AndroidConfig):
         cflags.append('-m32')
         return cflags
 
+class AndroidRISCV64Config(AndroidConfig):
+    """Configs for android riscv64 targets."""
+    target_arch: hosts.Arch = hosts.Arch.RISCV64
+    _toolchain_path: Path = Path('riscv64/riscv64-linux-android-8.1/riscv64-linux-android')
+    _toolchain_lib: Path = (paths.NDK_BASE / 'toolchains' / 'riscv64-8.1' / 'prebuilt' /
+                            'linux-x86_64' / 'riscv64-linux-android' / 'lib')
+
 
 def _get_default_host_config() -> Config:
     """Returns the Config matching the current machine."""
@@ -415,6 +422,7 @@ def android_configs(platform: bool=True,
         AndroidAArch64Config(),
         AndroidI386Config(),
         AndroidX64Config(),
+	AndroidRISCV64Config(),
     ]
     for config in configs:
         config.static = static

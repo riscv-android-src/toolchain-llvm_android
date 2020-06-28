@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!pi_level/usr/bin/env python3
 #
 # Copyright (C) 2016 The Android Open Source Project
 #
@@ -125,13 +125,16 @@ def build_runtimes(build_lldb_server: bool):
     # 32-bit host crts are not needed for Darwin
     if hosts.build_host().is_linux:
         builders.CompilerRTHostI386Builder().build()
-    builders.LibOMPBuilder().build()
+    # FIXME: skip for riscv
+    #builders.LibOMPBuilder().build()
     if build_lldb_server:
         builders.LldbServerBuilder().build()
     # Bug: http://b/64037266. `strtod_l` is missing in NDK r15. This will break
     # libcxx build.
-    # build_libcxx(toolchain, version)
-    builders.AsanMapFileBuilder().build()
+    # FIXME: version undefine?
+    #build_libcxx(toolchain, "11.0.3")
+    #FIXME: Can't build for riscv64
+    #builders.AsanMapFileBuilder().build()
 
 
 def install_wrappers(llvm_install_path: Path, llvm_next=False) -> None:
