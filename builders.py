@@ -158,8 +158,9 @@ class Stage2Builder(base_builders.LLVMBuilder):
 
     @property
     def llvm_projects(self) -> Set[str]:
+        #'openmp', 
         proj = {'clang', 'lld', 'libcxxabi', 'libcxx', 'compiler-rt',
-                'clang-tools-extra', 'openmp', 'polly'}
+                'clang-tools-extra', 'polly'}
         if self.build_lldb:
             proj.add('lldb')
         return proj
@@ -282,8 +283,11 @@ class CompilerRTBuilder(base_builders.LLVMRuntimeBuilder):
         # lib/android instead of lib/linux.
         del defines['CMAKE_SYSTEM_NAME']
         libs: List[str] = []
+        print ("helloworld arch: {} {}".format(arch, arch == 'riscv64'))
         if arch == 'arm':
             libs += ['-latomic']
+        if arch == 'riscv64' or arch == 'riscv' or arch==hosts.Arch.RISCV64:
+            defines['CMAKE_SIZEOF_VOID_P'] = 8
         if self._config.api_level < 21:
             libs += ['-landroid_support']
         defines['SANITIZER_COMMON_LINK_LIBS'] = ' '.join(libs)
@@ -294,7 +298,10 @@ class CompilerRTBuilder(base_builders.LLVMRuntimeBuilder):
     @property
     def cflags(self) -> List[str]:
         cflags = super().cflags
+        arch = self._config.target_arch
         cflags.append('-funwind-tables')
+        #cflags.append("-lm -Xlinker --allow-multiple-definition");
+        cflags.append("-lm");
         return cflags
 
     def install_config(self) -> None:
@@ -306,6 +313,8 @@ class CompilerRTBuilder(base_builders.LLVMRuntimeBuilder):
         arch = self._config.target_arch
         sarch = 'i686' if arch == hosts.Arch.I386 else arch.value
         static_lib_filename = 'libclang_rt.fuzzer-' + sarch + '-android.a'
+        if arch == hosts.Arch.RISCV64:
+            return
 
         lib_dir = self.install_dir / 'lib' / 'linux'
         arch_dir = lib_dir / arch.value
@@ -473,6 +482,7 @@ class LldbServerBuilder(base_builders.LLVMRuntimeBuilder):
             hosts.Arch.AARCH64: 'AArch64',
             hosts.Arch.I386: 'X86',
             hosts.Arch.X86_64: 'X86',
+            hosts.Arch.RISCV64: 'RISCV',
         }[self._config.target_arch]
 
     @property
@@ -542,6 +552,8 @@ class LibCxxBuilder(base_builders.LLVMRuntimeBuilder):
         defines['LIBCXX_ENABLE_STATIC_ABI_LIBRARY'] = 'ON'
         defines['LIBCXX_CXX_ABI'] = 'libcxxabi'
         defines['LIBCXX_HAS_WIN32_THREAD_API'] = 'ON'
+        defines['LIBCXXABI_ENABLE_THREADS'] = 'ON'
+        defines['LIBCXXABI_HAS_PTHREAD_API'] = 'ON'
 
         # Use cxxabi header from the source directory since it gets installed
         # into install_dir only during libcxx's install step.  But use the

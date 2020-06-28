@@ -213,6 +213,7 @@ class AndroidConfig(_BaseConfig):
         api_level = 10000 if self.platform else self.api_level
         cflags.append(f'--target={self.target_arch.llvm_triple}')
         cflags.append(f'-B{toolchain_bin}')
+        #cflags.append("-Wl,--defsym=__TMC_END__=0");
         cflags.append(f'-D__ANDROID_API__={api_level}')
         cflags.append('-ffunction-sections')
         cflags.append('-fdata-sections')
@@ -309,6 +310,14 @@ class AndroidI386Config(AndroidConfig):
         # The 32-bit libgcc.a is sometimes in a separate subdir
         return super()._toolchain_builtins / '32'
 
+class AndroidRISCV64Config(AndroidConfig):
+    """Configs for android riscv64 targets."""
+    target_arch: hosts.Arch = hosts.Arch.RISCV64
+    _toolchain_path: Path = Path('riscv64/riscv64-linux-android-8.1/riscv64-linux-android')
+    _toolchain_lib: Path = (paths.NDK_BASE / 'toolchains' / 'riscv64-8.1' / 'prebuilt' /
+                            'linux-x86_64' / 'riscv64-linux-android' / 'lib')
+
+
 
 def _get_default_host_config() -> Config:
     """Returns the Config matching the current machine."""
@@ -336,6 +345,7 @@ def android_configs(platform: bool = True,
         AndroidAArch64Config(),
         AndroidI386Config(),
         AndroidX64Config(),
+	AndroidRISCV64Config(),
     ]
     for config in configs:
         config.static = static

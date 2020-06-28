@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!pi_level/usr/bin/env python3
 #
 # Copyright (C) 2016 The Android Open Source Project
 #
@@ -96,8 +96,8 @@ def ndk_base():
 def android_api(arch: hosts.Arch, platform=False):
     if platform:
         return 29
-    elif arch in [hosts.Arch.ARM, hosts.Arch.I386]:
-        return 16
+    #elif arch in [hosts.Arch.ARM, hosts.Arch.I386]:
+    #    return 16
     else:
         return 21
 
@@ -222,16 +222,18 @@ def invoke_cmake(out_path, defines, env, cmake_path, target=None, install=True):
 
 def cross_compile_configs(toolchain, platform=False, static=False):
     configs = [
-        (hosts.Arch.ARM, 'arm/arm-linux-androideabi-4.9/arm-linux-androideabi',
-         'arm-linux-android', '-march=armv7-a'),
+        #(hosts.Arch.ARM, 'arm/arm-linux-androideabi-4.9/arm-linux-androideabi',
+        # 'arm-linux-android', '-march=armv7-a'),
         (hosts.Arch.AARCH64,
          'aarch64/aarch64-linux-android-4.9/aarch64-linux-android',
-         'aarch64-linux-android', ''),
+         'aarch64-linux-android', '-lgcc'),
         (hosts.Arch.X86_64,
          'x86/x86_64-linux-android-4.9/x86_64-linux-android',
          'x86_64-linux-android', ''),
         (hosts.Arch.I386, 'x86/x86_64-linux-android-4.9/x86_64-linux-android',
          'i686-linux-android', '-m32'),
+        (hosts.Arch.RISCV64, 'riscv64/riscv64-linux-android-8.1/riscv64-linux-android',
+         'riscv64-linux-android', ''),
     ]
 
     cc = os.path.join(toolchain, 'bin', 'clang')
@@ -266,6 +268,9 @@ def cross_compile_configs(toolchain, platform=False, static=False):
                                               'arm-linux-androideabi')
         elif arch in [hosts.Arch.I386, hosts.Arch.X86_64]:
             toolchain_lib = ndk_toolchain_lib(arch, arch.ndk_arch + '-4.9',
+                                              llvm_triple)
+        elif arch == hosts.Arch.RISCV64:
+            toolchain_lib = ndk_toolchain_lib(arch, arch.ndk_arch + '-8.1',
                                               llvm_triple)
         else:
             toolchain_lib = ndk_toolchain_lib(arch, llvm_triple + '-4.9',
@@ -434,7 +439,7 @@ class SysrootsBuilder(base_builders.Builder):
 
             utils.check_call([self.toolchain.cc,
                               f'--target={arch.llvm_triple}',
-                              '-fuse-ld=lld', '-nostdlib', '-shared',
+                              '-fuse-ld=lld', '-nostdlib', '-shared', '-mno-relax',
                               '-Wl,-soname,libc++.so',
                               '-o{}'.format(libdir / 'libc++.so'),
                               str(platform_stubs / 'libc++.c')])
@@ -443,7 +448,7 @@ class SysrootsBuilder(base_builders.Builder):
             # toolchain/libcxxabi and use it when building runtimes.  This
             # should affect all compiler-rt runtimes that use libcxxabi
             # (e.g. asan, hwasan, scudo, tsan, ubsan, xray).
-            if arch not in (hosts.Arch.AARCH64, hosts.Arch.X86_64):
+            if arch not in (hosts.Arch.AARCH64, hosts.Arch.X86_64,hosts.Arch.RISCV64):
                 with (libdir / 'libc++abi.so').open('w') as f:
                     f.write('INPUT(-lc++)')
             else:
@@ -550,13 +555,16 @@ def build_runtimes(toolchain, args=None):
     # 32-bit host crts are not needed for Darwin
     if hosts.build_host().is_linux:
         builders.CompilerRTHostI386Builder().build()
-    builders.LibOMPBuilder().build()
+    # FIXME: skip for riscv
+    #builders.LibOMPBuilder().build()
     if BUILD_LLDB:
         builders.LldbServerBuilder().build()
     # Bug: http://b/64037266. `strtod_l` is missing in NDK r15. This will break
     # libcxx build.
-    # build_libcxx(toolchain, version)
-    builders.AsanMapFileBuilder().build()
+    # FIXME: version undefine?
+    #build_libcxx(toolchain, "11.0.3")
+    #FIXME: Can't build for riscv64
+    #builders.AsanMapFileBuilder().build()
 
 
 def install_wrappers(llvm_install_path):
@@ -866,7 +874,7 @@ def package_toolchain(build_dir, build_name, host: hosts.Host, dist_dir, strip=T
     bits_install_path = os.path.join(header_path, 'bits')
     if not os.path.isdir(bits_install_path):
         os.mkdir(bits_install_path)
-    bits_stdatomic_path = utils.android_path(libc_include_path, 'bits', 'stdatomic.h')
+    bits_stdatomic_path = utils.android_path(libc_include_path, 'stdatomic.h')
     install_file(bits_stdatomic_path, bits_install_path)
 
 
@@ -1114,6 +1122,8 @@ def main():
             runtimes_toolchain = stage2_install
             if args.debug or instrumented:
                 runtimes_toolchain = stage1_install
+
+            print ("build runtime: {}, args{}".format(runtimes_toolchain, args))
             build_runtimes(runtimes_toolchain, args)
 
     if need_windows:

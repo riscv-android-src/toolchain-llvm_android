@@ -21,7 +21,7 @@ from typing import Set
 MAC_MIN_VERSION: str = '10.10'
 
 # This is the baseline stable version of Clang to start our stage-1 build.
-CLANG_PREBUILT_VERSION: str = 'clang-r383902'
+CLANG_PREBUILT_VERSION: str = 'clang-r370808b'
 
 # This is the ndk version used to build runtimes.
 NDK_VERSION: str = 'r20'
@@ -30,4 +30,4 @@ NDK_VERSION: str = 'r20'
 HOST_TARGETS: Set[str] = set(['X86'])
 
 # Targets for Android.
-ANDROID_TARGETS: Set[str] = set(['AArch64', 'ARM', 'BPF', 'X86'])
+ANDROID_TARGETS: Set[str] = set(['AArch64', 'ARM', 'BPF', 'X86', 'RISCV'])

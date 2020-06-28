@@ -57,6 +57,7 @@ class Arch(enum.Enum):
     AARCH64 = 'aarch64'
     I386 = 'i386'
     X86_64 = 'x86_64'
+    RISCV64 = 'riscv64'
 
     @staticmethod
     def from_triple(triple: str) -> 'Arch':
@@ -74,6 +75,7 @@ class Arch(enum.Enum):
             Arch.AARCH64: 'aarch64',
             Arch.I386: 'i686',
             Arch.X86_64: 'x86_64',
+            Arch.RISCV64: 'riscv64',
         }[self]
 
     @property
@@ -89,6 +91,7 @@ class Arch(enum.Enum):
             Arch.AARCH64: 'arm64',
             Arch.I386: 'x86',
             Arch.X86_64: 'x86_64',
+            Arch.RISCV64: 'riscv64',
         }[self]
 
     @property
