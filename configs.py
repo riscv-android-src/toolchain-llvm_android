@@ -185,8 +185,9 @@ class AndroidConfig(_BaseConfig):
     @property
     def _toolchain_builtins(self) -> Path:
         """The path with libgcc.a to include in linker search path."""
+        version_number = '8.4.0' if self.target_arch == hosts.Arch.RISCV64 else '4.9.x'
         return (paths.GCC_ROOT / self._toolchain_path / '..' / 'lib' / 'gcc' /
-                self._toolchain_path.name / '4.9.x')
+                self._toolchain_path.name / version_number)
 
     @property
     def ldflags(self) -> List[str]:
