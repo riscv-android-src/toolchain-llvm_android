@@ -256,9 +256,10 @@ def cross_compile_configs(toolchain, platform=False, static=False):
         defines['LLVM_CONFIG_PATH'] = llvm_config
 
         # Include the directory with libgcc.a to the linker search path.
+        version_number = '8.4.0' if arch == hosts.Arch.RISCV64 else '4.9.x'
         toolchain_builtins = os.path.join(
             toolchain_root, toolchain_path, '..', 'lib', 'gcc',
-            os.path.basename(toolchain_path), '4.9.x')
+            os.path.basename(toolchain_path), version_number)
         # The 32-bit libgcc.a is sometimes in a separate subdir
         if arch == hosts.Arch.I386:
             toolchain_builtins = os.path.join(toolchain_builtins, '32')
