@@ -853,6 +853,8 @@ class SysrootsBuilder(base_builders.Builder):
             platform_stubs = paths.OUT_DIR / 'platform_stubs' / arch.ndk_arch
             platform_stubs.mkdir(parents=True, exist_ok=True)
             libdir = sysroot / 'usr' / ('lib64' if arch == hosts.Arch.X86_64 else 'lib')
+            relax = '-mno-relax' if arch == hosts.Arch.RISCV64 else ''
+
             libdir.mkdir(parents=True, exist_ok=True)
             with (platform_stubs / 'libc++.c').open('w') as f:
                 f.write(textwrap.dedent("""\
