@@ -845,6 +845,7 @@ class SysrootsBuilder(base_builders.Builder):
             platform_stubs.mkdir(parents=True, exist_ok=True)
             libdir = sysroot / 'usr' / ('lib64' if arch == hosts.Arch.X86_64 else 'lib')
             libdir.mkdir(parents=True, exist_ok=True)
+            relax_option = '-mno-relax' if arch == hosts.Arch.RISCV64 else ''
             with (platform_stubs / 'libc++.c').open('w') as f:
                 f.write(textwrap.dedent("""\
                     void __cxa_atexit() {}
@@ -859,7 +860,7 @@ class SysrootsBuilder(base_builders.Builder):
 
             utils.check_call([self.toolchain.cc,
                               f'--target={arch.llvm_triple}',
-                              '-fuse-ld=lld', '-nostdlib', '-shared',
+                              relax_option, '-fuse-ld=lld', '-nostdlib', '-shared',
                               '-Wl,-soname,libc++.so',
                               '-o{}'.format(libdir / 'libc++.so'),
                               str(platform_stubs / 'libc++.c')])
