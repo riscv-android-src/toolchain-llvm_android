@@ -375,8 +375,8 @@ class CompilerRTBuilder(base_builders.LLVMRuntimeBuilder):
         arch = self._config.target_arch
         sarch = 'i686' if arch == hosts.Arch.I386 else arch.value
         static_lib_filename = 'libclang_rt.fuzzer-' + sarch + '-android.a'
-        if arch == hosts.Arch.RISCV64:
-            return
+        #if arch == hosts.Arch.RISCV64:
+        #    return
 
         lib_dir = self.install_dir / 'lib' / 'linux'
         arch_dir = lib_dir / arch.value
@@ -565,6 +565,15 @@ class LibOMPBuilder(base_builders.LLVMRuntimeBuilder):
         dst_dir = self.install_dir
         dst_dir.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src_lib, dst_dir / libname)
+        # Install libomp headers manually.
+        header_src = self.output_dir / 'runtime' / 'src'
+        header_dst = self.output_toolchain.clang_lib_dir / 'include'
+        header_dst.mkdir(parents=True, exist_ok=True)
+        for f in header_src.iterdir():
+            if f.is_dir():
+                continue
+            if f.suffix in ('.h'):
+                shutil.copy2(f, header_dst)
 
 
 class LibNcursesBuilder(base_builders.AutoconfBuilder, base_builders.LibInfo):

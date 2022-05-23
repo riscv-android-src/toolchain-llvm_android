@@ -126,15 +126,15 @@ def build_runtimes(build_lldb_server: bool):
     if hosts.build_host().is_linux:
         builders.CompilerRTHostI386Builder().build()
     # FIXME: skip for riscv
-    #builders.LibOMPBuilder().build()
+    builders.LibOMPBuilder().build()
     if build_lldb_server:
         builders.LldbServerBuilder().build()
     # Bug: http://b/64037266. `strtod_l` is missing in NDK r15. This will break
     # libcxx build.
     # FIXME: version undefine?
-    #build_libcxx(toolchain, "11.0.3")
+    #build_libcxx(toolchain, "11.0.7")
     #FIXME: Can't build for riscv64
-    #builders.AsanMapFileBuilder().build()
+    builders.AsanMapFileBuilder().build()
 
 
 def install_wrappers(llvm_install_path: Path, llvm_next=False) -> None:
