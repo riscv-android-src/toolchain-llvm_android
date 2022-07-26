@@ -871,6 +871,7 @@ class SysrootsBuilder(base_builders.Builder):
             utils.check_call([self.toolchain.cc,
                               f'--target={arch.llvm_triple}',
                               '-fuse-ld=lld', '-nostdlib', '-shared',
+                              relax,
                               '-Wl,-soname,libc++.so',
                               '-o{}'.format(libdir / 'libc++.so'),
                               str(platform_stubs / 'libc++.c')])
